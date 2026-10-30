@@ -29,7 +29,7 @@ main{padding:14px 16px;max-width:1500px;margin:auto}
 table{border-collapse:collapse;width:100%;min-width:950px}th,td{padding:9px 10px;border-bottom:1px solid var(--bd);text-align:left;font-size:16px}th{max-width:150px;vertical-align:bottom;color:var(--ac);font-weight:700;font-size:14px;text-transform:uppercase;position:sticky;top:0;background:var(--card)}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}tbody tr{cursor:pointer}tbody tr:hover{background:var(--ac2)}
 .bar{height:10px;background:linear-gradient(90deg,#0b9ec9,#7c3aed,#e0306b);border-radius:5px}.ft{display:flex;gap:10px;align-items:center;margin-top:10px;color:var(--mu);font-size:15px;flex-wrap:wrap}
-.bt{display:flex;gap:6px;overflow-x:auto;margin:6px 0;align-items:center}.bt b{font-size:13px;min-width:72px}.bt button{white-space:nowrap;background:#ffffff26;color:#fff;border-color:#ffffff55;padding:6px 12px;font-size:14px}.bt button.on{background:#f59e0b;border-color:#f59e0b;color:#1b2430}
+.sbs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}@media (max-width:950px){.sbs{grid-template-columns:1fr}}.bt{display:flex;gap:6px;overflow-x:auto;margin:6px 0;align-items:center}#stt th,#stt td{padding:0 10px;white-space:nowrap}#stt td{height:44px}#stt th{height:52px;vertical-align:middle}.bt b{font-size:13px;min-width:72px}.bt button{white-space:nowrap;background:#ffffff26;color:#fff;border-color:#ffffff55;padding:6px 12px;font-size:14px}.bt button.on{background:#f59e0b;border-color:#f59e0b;color:#1b2430}
 .tw{max-height:78vh;overflow:auto}td.cr{background:#ef444455;font-weight:700}td.ca{background:#f59e0b66;font-weight:700}.lg{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mu);margin-left:8px}.lg i{width:16px;height:16px;border-radius:3px;display:inline-block}
 </style></head><body>
 <header><h1>HMIS Service Delivery 2026-27 <small>Delhi · Apr–Sep 2026 · data as on 27 Oct 2026 · <span id="cnt"></span></small></h1>
@@ -43,6 +43,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}tbody tr{cursor:poi
 <main><div class="chips" id="chips"></div><div class="cards" id="cards"></div>
 <div class="grid">
 <div class="pn wide"><h3>Monthly trend – <span class="mn"></span> <small style="color:var(--mu)">(click a month to filter)</small></h3><div class="cv"><canvas id="c_tr"></canvas></div></div>
+<div class="pn wide" id="stp" style="--pc:#f59e0b"><h3>⭐ District Star Ranking – overall data reporting <small style="color:var(--mu)">(click a bar or row to filter the dashboard to that district)</small></h3>
+<div class="sbs"><div class="cv t" style="height:620px"><canvas id="c_s"></canvas></div>
+<div class="tw" style="max-height:none"><table id="stt" style="min-width:520px"></table></div></div>
+<p style="font-size:13px;color:var(--mu);margin:8px 0 0"><b>How stars are calculated:</b> score (0–100) = average of ① <b>Active reporting</b> – % of facility-months with any service data, ② <b>Key-indicator completeness</b> – % of active facility-months with no "reported 0 while main indicator &gt; 0" flag, ③ <b>Validation compliance</b> – % of active facility-months passing all validation rules. Stars: 5★ ≥ 80 · 4★ 70–79.9 · 3★ 60–69.9 · 2★ 50–59.9 · 1★ &lt; 50. Ownership, format, facility-type, search and month filters apply.</p></div>
 <div class="pn"><h3>By district – <span class="mn"></span></h3><div class="cv t"><canvas id="c_d"></canvas></div></div>
 <div class="pn"><h3>By ownership – <span class="mn"></span></h3><div class="cv"><canvas id="c_o"></canvas></div></div>
 <div class="pn"><h3>By format type – <span class="mn"></span></h3><div class="cv"><canvas id="c_f"></canvas></div></div>
@@ -168,7 +172,20 @@ function render(){
   chart(k[3],k[0]==='o'?'doughnut':'bar',lb,dt,sel,j=>tog(k[0],ix[j]),k[0]!=='o'&&k[0]!=='f',k[0]==='o'?['#0b9ec9','#f2711c']:null)});
  // comparison
  chart('c_i','bar',ids.map(i=>II[i][1]),ids.map(i=>all.reduce((s,f)=>s+mv(f,i,M),0)),ids.indexOf(S.met),j=>{S.met=ids[j];render()},true);
- table(all)}
+ table(all);stars()}
+const STAR=[50,60,70,80],SCOL=['#ef4444','#f97316','#f59e0b','#84cc16','#10b981'],ACT=['opd','ipd','anc','del','ish','lab','edr','pen1','cond','nsv'];
+let QQ=null;
+function calcQ(){const R=PAGES.flatMap(p=>p[3]),MP=PAGES.filter(p=>p[4].length);QQ=D.fac.map(f=>{const o=[];for(let m=0;m<D.months.length;m++){const g=i=>mv(f,i,m);
+ const act=ACT.some(i=>g(i)>0);o.push(act?(MP.some(p=>p[4].some(c=>g(c)===0&&g(p[2][0])>0))?1:0)+(R.some(r=>r[2](g))?2:0)+4:0)}return o})}
+const starN=s=>1+STAR.filter(t=>s>=t).length;
+function stars(){const box=$('stp');box.style.display=S.pg===0?'':'none';if(S.pg!==0)return;if(!QQ)calcQ();
+ const idx=new Map(D.fac.map((f,i)=>[f,i])),ms=S.m<0?[...D.months.keys()]:[S.m],acc={};
+ filt('d').forEach(f=>{const q=QQ[idx.get(f)],a=acc[f[2]]=acc[f[2]]||{n:0,a:0,l:0,b:0};ms.forEach(m=>{a.n++;const c=q[m];if(c&4){a.a++;if(c&1)a.l++;if(c&2)a.b++}})});
+ const rows=Object.keys(acc).map(d=>{const a=acc[d],A=a.a/a.n,C=a.a?1-a.l/a.a:0,V=a.a?1-a.b/a.a:0,sc=(A+C+V)/3*100;return {d:+d,A:A*100,C:C*100,V:V*100,sc,st:starN(sc)}}).sort((x,y)=>y.sc-x.sc);
+ const stx=n=>'★'.repeat(n)+'☆'.repeat(5-n);
+ chart('c_s','bar',rows.map(r=>D.dims['District Name'][r.d]+'  '+stx(r.st)),rows.map(r=>+r.sc.toFixed(1)),S.d<0?null:rows.findIndex(r=>r.d===S.d),j=>tog('d',rows[j].d),true,rows.map(r=>SCOL[r.st-1]));
+ $('stt').innerHTML='<thead><tr><th>Rank</th><th>District</th><th>Star rating</th><th class="n">Score</th><th class="n" title="Active reporting %">Active %</th><th class="n" title="Key-indicator completeness %">Complete %</th><th class="n" title="Validation compliance %">Valid %</th></tr></thead><tbody>'+
+ rows.map((r,i)=>`<tr data-dd="${r.d}"><td>${i+1}</td><td>${D.dims['District Name'][r.d]}</td><td style="color:${SCOL[r.st-1]};font-size:20px;letter-spacing:2px;white-space:nowrap">${stx(r.st)}</td><td class="n"><b>${r.sc.toFixed(1)}</b></td><td class="n">${r.A.toFixed(1)}</td><td class="n">${r.C.toFixed(1)}</td><td class="n">${r.V.toFixed(1)}</td></tr>`).join('')+'</tbody>';const tb=$('stt'),hh=tb.tHead.offsetHeight,ch=CH.c_s;$('c_s').parentNode.style.height=(tb.offsetHeight+36)+'px';ch.options.layout={padding:{top:hh,bottom:2}};ch.resize();ch.update('none')}
 function table(all){
  const Pg=PAGES[S.pg],rules=Pg[3],must=Pg[4],M=S.m,cols=[...new Set(Pg[2].concat(rules.flatMap(r=>r[1])))];
  const rows=all.map(f=>{const v={};cols.forEach(c=>v[c]=mv(f,c,M));const gv=i=>v[i]!==undefined?v[i]:mv(f,i,M);
@@ -203,8 +220,13 @@ $('rs').onclick=()=>{Object.assign(S,{m:-1,d:-1,o:-1,f:-1,t:-1,q:"",tab:-1,lim:5
 $('more').onclick=()=>{S.lim+=50;table(filt())};
 $('csv').onclick=()=>{const c=window._cols,L=[['Facility','Code','District','Ownership','Format','Type'].concat(c.map(i=>II[i][1]),['Issues']).join(',')].concat(window._rs.map(r=>{const f=r.f;return [f[1],f[0],D.dims['District Name'][f[2]],D.dims.Ownership[f[3]],D.dims['Format Type'][f[4]],D.dims['Facility Type'][f[5]]].concat(c.map(i=>r.v[i]),[(r.non?'Non-reporting; ':'')+r.less.map(x=>'Zero: '+II[x][1]).concat(r.lab).join('; ')]).map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')}));
  saveFile('facility_table.csv','\ufeff'+L.join('\n'))};
-async function saveFile(name,data){const dl=window.claude&&await claude.use('downloads');if(!dl){alert('Saving files is not available in this view.');return false}
- try{await dl.save({filename:name,data});return true}catch(e){if(!e||e.code!=='declined')alert('Could not save the file ('+((e&&e.code)||'error')+').');return false}}
+async function saveFile(name,data){
+ let dl=null;try{dl=window.claude&&await claude.use('downloads')}catch(e){dl=null}
+ if(dl){try{await dl.save({filename:name,data:data instanceof ArrayBuffer?data.slice(0):data});return true}catch(e){if(e&&e.code==='declined')return false}}
+ try{const b=new Blob([data],{type:/\.pdf$/.test(name)?'application/pdf':'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);
+  $('tinfo').textContent='If the file did not download, open the dashboard in its own browser tab (or host it on GitHub Pages) and try again.';return true}
+ catch(e){alert('Saving files is not available in this view. Open the dashboard in its own browser tab and try again.');return false}}
 $('pdf').onclick=async()=>{const btn=$('pdf'),old=btn.textContent;
  if(!window.jspdf){alert('PDF library could not be loaded. Check your internet connection.');return}
  btn.textContent='Preparing PDF…';btn.disabled=true;await new Promise(r=>setTimeout(r,30));
