@@ -32,12 +32,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}tbody tr{cursor:poi
 .sbs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}@media (max-width:950px){.sbs{grid-template-columns:1fr}}.bt{display:flex;gap:6px;overflow-x:auto;margin:6px 0;align-items:center}#stt th,#stt td{padding:0 10px;white-space:nowrap}#stt td{height:44px}#stt th{height:52px;vertical-align:middle}.bt b{font-size:13px;min-width:72px}.bt button{white-space:nowrap;background:#ffffff26;color:#fff;border-color:#ffffff55;padding:6px 12px;font-size:14px}.bt button.on{background:#f59e0b;border-color:#f59e0b;color:#1b2430}
 .tw{max-height:78vh;overflow:auto}td.cr{background:#ef444455;font-weight:700}td.ca{background:#f59e0b66;font-weight:700}.lg{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mu);margin-left:8px}.lg i{width:16px;height:16px;border-radius:3px;display:inline-block}
 .cp{font-weight:700;font-size:16px;margin-top:2px}.cp.up,.py .up{color:#0b9ec9}.cp.dn,.py .dn{color:#f2711c}.cp.na,.py .na{color:var(--mu)}.py{font-size:11px;color:var(--mu);white-space:nowrap;font-weight:400}.cmpn{background:var(--ac2);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:14px}
+.bt button:disabled{opacity:.4;cursor:not-allowed}
 </style></head><body>
 <header><h1>HMIS Service Delivery 2026-27 <small>Delhi · Apr–Oct 2026 · data as on 9 Nov 2026 · <span id="cnt"></span></small></h1>
 <nav id="nav"></nav>
-<div class="bt" id="db"></div><div class="bt" id="mb"></div>
+<div class="bt" id="mb"></div>
 <div class="filters">
-<label>Month<select id="fm"></select></label><label>District<select id="fd"></select></label><label>Ownership<select id="fo"></select></label>
+<label>Quarter<select id="fqt"></select></label><label>Month<select id="fm"></select></label><label>District<select id="fd"></select></label><label>Ownership<select id="fo"></select></label>
 <label>Format Type<select id="ff"></select></label><label>Facility Type<select id="ft"></select></label>
 <label>Search facility (name / code)<input id="fq" list="fl" placeholder="Type to search…"><datalist id="fl"></datalist></label>
 <label style="flex-direction:row;align-items:center;gap:8px;font-size:15px;cursor:pointer;color:#fff"><input type="checkbox" id="cmp" style="width:22px;height:22px;padding:0"> Compare with previous year (2025-26)</label><label>&nbsp;<button id="rs">Reset filters</button></label></div></header>
@@ -128,16 +129,20 @@ VR.del.pop();
  T("M2 · Delivery")[3]=VR.del;T("M4 · Outcome")[3]=VR.out})();
 const II={};D.ind.forEach((x,i)=>II[x[0]]=[i,x[1]]);
 const $=i=>document.getElementById(i),fmt=n=>new Intl.NumberFormat('en-IN',{maximumFractionDigits:1}).format(n);
-const S={pg:0,m:-1,d:-1,o:-1,f:-1,t:-1,q:"",met:"anc",lim:50,tab:-1,fl:"all",sort:null,rule:null,cmp:false,po:true};
+const QN=['Apr–Jun','Jul–Sep','Oct–Dec','Jan–Mar'];
+const S={pg:0,m:-1,d:-1,o:-1,f:-1,t:-1,q:"",met:"anc",lim:50,tab:-1,fl:"all",sort:null,rule:null,cmp:false,po:true,qt:-1};
 const K=[["d","District Name","fd","c_d"],["o","Ownership","fo","c_o"],["f","Format Type","ff","c_f"],["t","Facility Type","ft","c_t"]];
 const FI={d:2,o:3,f:4,t:5};
 function fill(id,arr,lbl){$(id).innerHTML=`<option value="-1">All ${lbl}</option>`+arr.map((a,i)=>`<option value="${i}">${a}</option>`).join('')}
-fill('fm',D.months,'months');K.forEach(k=>fill(k[2],D.dims[k[1]],k[1]+'s'));
+fill('fm',D.months,'months');
+$('fqt').innerHTML='<option value="-1">All quarters</option>'+[0,1,2,3].map(q=>{const av=[0,1,2].filter(i=>q*3+i<D.months.length).length;return `<option value="${q}" ${av?'':'disabled'}>Q${q+1} (${QN[q]})${av&&av<3?' – partial':''}${av?'':' – no data yet'}</option>`}).join('');K.forEach(k=>fill(k[2],D.dims[k[1]],k[1]+'s'));
 $('fl').innerHTML=D.fac.filter(f=>!f[8]).map(f=>`<option value="${f[1].replace(/"/g,'')}">`).join('');
 $('nav').innerHTML=PAGES.map((p,i)=>`<button data-i="${i}">${i+1}. ${p[0]}</button>`).join('');
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const mv=(f,id,m)=>{const a=f[6][II[id][0]];return a?(m<0?a.reduce((x,y)=>x+y,0):a[m]):0};
-const pv=(f,id,m)=>{const a=f[7][II[id][0]];return a?(m<0?a.slice(0,D.months.length).reduce((x,y)=>x+y,0):a[m]||0):0};
+const MS=()=>S.qt<0?[...D.months.keys()]:[0,1,2].map(i=>S.qt*3+i).filter(i=>i<D.months.length);
+const PL=(arr)=>{arr=arr||D.months;if(S.m>=0)return arr[S.m];const ms=MS();if(!ms.length)return '–';const r=arr[ms[0]]+(ms.length>1?' – '+arr[ms[ms.length-1]]:'');return S.qt>=0?'Q'+(S.qt+1)+' ('+r+')':r};
+const mv=(f,id,m)=>{const a=f[6][II[id][0]];return a?(m<0?MS().reduce((s,i)=>s+(a[i]||0),0):a[m]):0};
+const pv=(f,id,m)=>{const a=f[7][II[id][0]];return a?(m<0?MS().reduce((s,i)=>s+(a[i]||0),0):a[m]||0):0};
 const chg=(c,p)=>{if(!p)return c?'new':'–';const x=(c-p)/p*100;return (x>=0?'▲ +':'▼ ')+x.toFixed(1)+'%'},cc=(c,p)=>!p?'na':c>=p?'up':'dn',ptx=(c,p)=>!p?(c?'(new)':''):'('+(c>=p?'+':'')+((c-p)/p*100).toFixed(1)+'%)';
 function filt(skip,po){const q=S.q.toLowerCase();return D.fac.filter(f=>{if(f[8]&&!po)return false;for(const k in FI){if(k!==skip&&S[k]>=0&&f[FI[k]]!==S[k])return false}
  return !q||f[1].toLowerCase().includes(q)||f[0].includes(q)})}
@@ -158,19 +163,20 @@ const tog=(k,i)=>{S[k]=S[k]===i?-1:i;render()};
 function render(){
  const ids=PAGES[S.pg][1];if(!ids.includes(S.met))S.met=ids[0];
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',+b.dataset.i===S.pg));
- K.forEach(k=>$(k[2]).value=S[k[0]]);$('fm').value=S.m;$('fq').value=S.q;
+ K.forEach(k=>$(k[2]).value=S[k[0]]);$('fm').value=S.m;$('fqt').value=S.qt;$('fq').value=S.q;
  document.querySelectorAll('.mn').forEach(e=>e.textContent=II[S.met][1]);
  const all=filt(),M=S.m,CMP=S.cmp,allP=CMP?filt(undefined,S.po):[];$('cmp').checked=CMP;
- {const n=D.months.length,nPO=allP.filter(f=>f[8]).length;const nb=$('cmpnote');nb.style.display=CMP?'':'none';if(CMP)nb.innerHTML=`<b>Comparison with previous year:</b> ${S.m<0?'same months of 2025-26 ('+D.pmonths[0]+' – '+D.pmonths[n-1]+')':'same month of 2025-26 ('+D.pmonths[S.m]+')'} vs ${S.m<0?D.months[0]+' – '+D.months[n-1]:D.months[S.m]}. Increase/decrease is % change of 2026-27 over 2025-26 (&#9650; up, &#9660; down). ${nPO} facilities that reported in 2025-26 but have no 2026-27 record are ${S.po?'<b>included</b>':'<b>excluded</b>'} in the previous-year figures &nbsp;<label style="cursor:pointer"><input type="checkbox" id="po" ${S.po?'checked':''}> include them</label>`}$('cnt').textContent=fmt(all.length)+' facilities';
+ {const n=D.months.length,nPO=allP.filter(f=>f[8]).length;const nb=$('cmpnote');nb.style.display=CMP?'':'none';if(CMP)nb.innerHTML=`<b>Comparison with previous year:</b> same ${S.m<0?'months':'month'} of 2025-26 (${PL(D.pmonths)}) vs ${PL()}. Increase/decrease is % change of 2026-27 over 2025-26 (&#9650; up, &#9660; down). ${nPO} facilities that reported in 2025-26 but have no 2026-27 record are ${S.po?'<b>included</b>':'<b>excluded</b>'} in the previous-year figures &nbsp;<label style="cursor:pointer"><input type="checkbox" id="po" ${S.po?'checked':''}> include them</label>`}{$('mb').innerHTML='<b>QUARTER</b>'+[0,1,2,3].map(q=>`<button data-qq="${q}" ${D.months.length>q*3?'':'disabled'} class="${S.qt===q?'on':''}">Q${q+1} · ${QN[q]}</button>`).join('')}
+ $('cnt').textContent=fmt(all.length)+' facilities';
  // chips
- const ch=[];K.forEach(k=>{if(S[k[0]]>=0)ch.push([k[0],D.dims[k[1]][S[k[0]]]])});if(S.m>=0)ch.push(['m',D.months[S.m]]);if(S.q)ch.push(['q','Search: '+S.q]);
+ const ch=[];K.forEach(k=>{if(S[k[0]]>=0)ch.push([k[0],D.dims[k[1]][S[k[0]]]])});if(S.m>=0)ch.push(['m',D.months[S.m]]);if(S.qt>=0)ch.push(['qt',PL()]);if(S.q)ch.push(['q','Search: '+S.q]);
  $('chips').innerHTML=ch.length?ch.map(c=>`<span class="chip" data-k="${c[0]}">${c[1]} ✕</span>`).join(''):'<span style="color:var(--mu);font-size:15px">Click any card, bar, slice or month to cross-filter. Active filters appear here.</span>';
  // cards
  $('cards').innerHTML=ids.map((id,ix)=>{const t=all.reduce((s,f)=>s+mv(f,id,M),0),nz=all.filter(f=>mv(f,id,M)>0).length,p=CMP?allP.reduce((s,f)=>s+pv(f,id,M),0):0;
   return `<button class="sc ${id===S.met?'on':''}" data-id="${id}" style="--c:${PAL[ix%PAL.length]}"><div class="l">${II[id][1]}</div><div class="v">${fmt(t)}</div><div class="s">${fmt(nz)} facilities reporting</div>${CMP?`<div class="s">2025-26: <b>${fmt(p)}</b></div><div class="cp ${cc(t,p)}">${chg(t,p)}</div>`:''}</button>`}).join('');
  // trend
- const tr=D.months.map((_,m)=>all.reduce((s,f)=>s+mv(f,S.met,m),0));
- chart('c_tr','line',D.months,tr,S.m<0?null:S.m,i=>{S.m=S.m===i?-1:i;render()},false,null,CMP?D.months.map((_,m)=>allP.reduce((s,f)=>s+pv(f,S.met,m),0)):undefined);
+ const ML=MS(),tr=ML.map(m=>all.reduce((s,f)=>s+mv(f,S.met,m),0));
+ chart('c_tr','line',ML.map(m=>D.months[m]),tr,S.m<0?null:ML.indexOf(S.m),i=>{const m=ML[i];S.m=S.m===m?-1:m;if(S.m>=0)S.qt=-1;render()},false,null,CMP?ML.map(m=>allP.reduce((s,f)=>s+pv(f,S.met,m),0)):undefined);
  // dims
  K.forEach(k=>{const base=filt(k[0]),n=D.dims[k[1]].length,a=new Array(n).fill(0);base.forEach(f=>a[f[FI[k[0]]]]+=mv(f,S.met,M));const ap=new Array(n).fill(0);if(CMP)filt(k[0],S.po).forEach(f=>ap[f[FI[k[0]]]]+=pv(f,S.met,M));
   let ix=a.map((v,i)=>i).filter(i=>a[i]>0||ap[i]>0||S[k[0]]===i).sort((x,y)=>a[y]-a[x]);if(k[0]==='t')ix=ix.slice(0,12);
@@ -185,7 +191,7 @@ function calcQ(){const R=PAGES.flatMap(p=>p[3]),MP=PAGES.filter(p=>p[4].length);
  const act=ACT.some(i=>g(i)>0);o.push(act?(MP.some(p=>p[4].some(c=>g(c)===0&&g(p[2][0])>0))?1:0)+(R.some(r=>r[2](g))?2:0)+4:0)}return o})}
 const starN=s=>1+STAR.filter(t=>s>=t).length;
 function stars(){const box=$('stp');box.style.display=S.pg===0?'':'none';if(S.pg!==0)return;if(!QQ)calcQ();
- const idx=new Map(D.fac.map((f,i)=>[f,i])),ms=S.m<0?[...D.months.keys()]:[S.m],acc={};
+ const idx=new Map(D.fac.map((f,i)=>[f,i])),ms=S.m<0?MS():[S.m],acc={};
  filt('d').forEach(f=>{const q=QQ[idx.get(f)],a=acc[f[2]]=acc[f[2]]||{n:0,a:0,l:0,b:0};ms.forEach(m=>{a.n++;const c=q[m];if(c&4){a.a++;if(c&1)a.l++;if(c&2)a.b++}})});
  const rows=Object.keys(acc).map(d=>{const a=acc[d],A=a.a/a.n,C=a.a?1-a.l/a.a:0,V=a.a?1-a.b/a.a:0,sc=(A+C+V)/3*100;return {d:+d,A:A*100,C:C*100,V:V*100,sc,st:starN(sc)}}).sort((x,y)=>y.sc-x.sc);
  const stx=n=>'★'.repeat(n)+'☆'.repeat(5-n);
@@ -196,7 +202,7 @@ function table(all){
  const Pg=PAGES[S.pg],rules=Pg[3],must=Pg[4],M=S.m,cols=[...new Set(Pg[2].concat(rules.flatMap(r=>r[1])))];
  const rows=all.map(f=>{const v={},p={};cols.forEach(c=>{v[c]=mv(f,c,M);if(S.cmp)p[c]=pv(f,c,M)});const gv=i=>v[i]!==undefined?v[i]:mv(f,i,M);
   const less=must.filter(c=>v[c]===0&&v[cols[0]]>0),bad=[],lab=[],hit=[];
-  rules.forEach((r,ri)=>{let x=false,mm=M;if(M>=0)x=r[2](gv);else for(let m=0;m<D.months.length&&!x;m++){x=r[2](i=>mv(f,i,m));mm=m}if(x){bad.push(...r[1]);lab.push(r[0].replace('[V] ','')+(typeof x==='string'?' ['+x+(M<0?' in '+D.months[mm]:'')+']':''));hit.push(ri)}});
+  rules.forEach((r,ri)=>{let x=false,mm=M;if(M>=0)x=r[2](gv);else for(const m of MS()){if(x)break;x=r[2](i=>mv(f,i,m));mm=m}if(x){bad.push(...r[1]);lab.push(r[0].replace('[V] ','')+(typeof x==='string'?' ['+x+(M<0?' in '+D.months[mm]:'')+']':''));hit.push(ri)}});
   return {f,v,p,less,bad,lab,hit,non:cols.every(c=>v[c]===0),rep:cols.some(c=>v[c]>0)}});
  const st={all:()=>true,rep:x=>x.rep,non:x=>x.non,less:x=>x.less.length>0,bad:x=>x.lab.length>0};
  const hasQ=rules.length>0;
@@ -212,18 +218,18 @@ function table(all){
  (sh.map((r,i)=>{const f=r.f;return `<tr data-q="${f[0]}"><td>${i+1}</td><td>${f[1]}<br><small style="color:var(--mu)">${f[0]} · ${D.dims['Facility Type'][f[5]]} · ${D.dims.Ownership[f[3]]}</small></td><td>${D.dims['District Name'][f[2]]}</td><td>${D.dims['Format Type'][f[4]]}</td>`+
   cols.map(c=>`<td class="n ${r.less.includes(c)?'cr':r.bad.includes(c)?'ca':''}">${fmt(r.v[c])}${S.cmp?`<div class="py">PY ${fmt(r.p[c])} <span class="${cc(r.v[c],r.p[c])}">${chg(r.v[c],r.p[c])}</span></div>`:''}</td>`).join('')+`<td style="font-size:13px;min-width:200px">${r.non?'<b>Non-reporting</b>':''}${r.less.map(c=>'Zero: '+II[c][1]).concat(r.lab).join('; ')}</td></tr>`}).join('')||`<tr><td colspan="${cols.length+5}">No facilities match.</td></tr>`)+'</tbody>';
  $('tinfo').textContent=`Showing ${sh.length} of ${rs.length}`+(S.cmp?' · PY = same period of 2025-26, with % change of 2026-27':'');$('more').style.display=sh.length<rs.length?'':'none';window._rs=rs;window._cols=cols}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-i],[data-id],[data-k],[data-t],[data-q],[data-fl],[data-rl],[data-s],[data-dd],[data-mm]');if(!t||!t.closest('body'))return;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-i],[data-id],[data-k],[data-t],[data-q],[data-fl],[data-rl],[data-s],[data-dd],[data-mm],[data-qq]');if(!t||!t.closest('body'))return;
  if(t.matches('nav button')){S.pg=+t.dataset.i;S.lim=50;S.sort=null;S.fl='all';S.rule=null;S.tab=-1;S.met=PAGES[S.pg][1][0]}
- else if(t.dataset.rl!==undefined){S.rule=+t.dataset.rl<0?null:+t.dataset.rl;S.lim=50}else if(t.dataset.fl){S.fl=t.dataset.fl;S.lim=50}else if(t.dataset.s){S.sort=t.dataset.s}else if(t.dataset.dd!==undefined){S.d=S.d===+t.dataset.dd?-1:+t.dataset.dd}else if(t.dataset.mm!==undefined){S.m=S.m===+t.dataset.mm?-1:+t.dataset.mm}else if(t.dataset.id)S.met=t.dataset.id;
+ else if(t.dataset.rl!==undefined){S.rule=+t.dataset.rl<0?null:+t.dataset.rl;S.lim=50}else if(t.dataset.fl){S.fl=t.dataset.fl;S.lim=50}else if(t.dataset.s){S.sort=t.dataset.s}else if(t.dataset.dd!==undefined){S.d=S.d===+t.dataset.dd?-1:+t.dataset.dd}else if(t.dataset.mm!==undefined){S.m=S.m===+t.dataset.mm?-1:+t.dataset.mm;if(S.m>=0)S.qt=-1}else if(t.dataset.qq!==undefined){S.qt=S.qt===+t.dataset.qq?-1:+t.dataset.qq;S.m=-1}else if(t.dataset.id)S.met=t.dataset.id;
  else if(t.dataset.k){const k=t.dataset.k;S[k]=k==='q'?"":-1}
  else if(t.matches('#tabs button')){S.tab=+t.dataset.t;S.lim=50}
  else if(t.matches('tr')){S.q=t.dataset.q}
  else return;render()});
 K.forEach(k=>$(k[2]).onchange=e=>{S[k[0]]=+e.target.value;render()});
 $('cmp').onchange=e=>{S.cmp=e.target.checked;render()};document.addEventListener('change',e=>{if(e.target.id==='po'){S.po=e.target.checked;render()}});
-$('fm').onchange=e=>{S.m=+e.target.value;render()};
+$('fm').onchange=e=>{S.m=+e.target.value;if(S.m>=0)S.qt=-1;render()};$('fqt').onchange=e=>{S.qt=+e.target.value;S.m=-1;render()};
 $('fq').oninput=e=>{S.q=e.target.value;S.lim=50;render();$('fq').focus()};
-$('rs').onclick=()=>{Object.assign(S,{m:-1,d:-1,o:-1,f:-1,t:-1,q:"",tab:-1,lim:50});render()};
+$('rs').onclick=()=>{Object.assign(S,{qt:-1,m:-1,d:-1,o:-1,f:-1,t:-1,q:"",tab:-1,lim:50});render()};
 $('more').onclick=()=>{S.lim+=50;table(filt())};
 $('csv').onclick=()=>{const c=window._cols,L=[['Facility','Code','District','Ownership','Format','Type'].concat(c.map(i=>II[i][1]),S.cmp?c.map(i=>II[i][1]+' (2025-26)'):[],['Issues']).join(',')].concat(window._rs.map(r=>{const f=r.f;return [f[1],f[0],D.dims['District Name'][f[2]],D.dims.Ownership[f[3]],D.dims['Format Type'][f[4]],D.dims['Facility Type'][f[5]]].concat(c.map(i=>r.v[i]),S.cmp?c.map(i=>r.p[i]):[],[(r.non?'Non-reporting; ':'')+r.less.map(x=>'Zero: '+II[x][1]).concat(r.lab).join('; ')]).map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')}));
  saveFile('facility_table.csv','\ufeff'+L.join('\n'))};
@@ -239,7 +245,7 @@ $('pdf').onclick=async()=>{const btn=$('pdf'),old=btn.textContent;
  btn.textContent='Preparing PDF…';btn.disabled=true;await new Promise(r=>setTimeout(r,30));
  try{const c=window._cols,rs=window._rs,Pg=PAGES[S.pg],cl=s=>String(s).replace(/≠/g,'!=').replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/[^\x20-\xFF]/g,'-');
  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
- const fl=[];K.forEach(k=>{if(S[k[0]]>=0)fl.push(k[1]+': '+D.dims[k[1]][S[k[0]]])});fl.push('Month: '+(S.m<0?'All (Apr-Oct 2026)':D.months[S.m]));if(S.q)fl.push('Search: '+S.q);
+ const fl=[];K.forEach(k=>{if(S[k[0]]>=0)fl.push(k[1]+': '+D.dims[k[1]][S[k[0]]])});fl.push('Period: '+PL());if(S.q)fl.push('Search: '+S.q);
  const stl={all:'All facilities',rep:'Reporting facilities',non:'Non-reporting facilities',less:'Less-reporting facilities',bad:'Inconsistent (validation failed)'}[S.fl];
  doc.setFontSize(12);doc.text('HMIS Service Delivery 2026-27 - Delhi: '+cl(Pg[0]),6,8);
  doc.setFontSize(6.5);doc.text(doc.splitTextToSize(cl('Data as on 9 Nov 2026 | List: '+stl+(S.rule!==null?' | Rule: '+Pg[3][S.rule][0].replace('[V] ',''):'')+' | '+fl.join(' | ')+' | Facilities: '+rs.length+(S.cmp?' | Each value is followed by PY = same period of 2025-26 and % change':'')),285),6,12.5);
